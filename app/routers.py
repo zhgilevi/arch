@@ -26,5 +26,5 @@ def get_clusters(cluster_num: int, db: Session = Depends(get_db)):
 
 @router.get("/burial/{burial_short_name}")
 def get_burial(burial_short_name: str, db: Session = Depends(get_db)):
-    response = get_burial_info(db, burial_name)
+    response = get_burial_info(db, burial_short_name)
     return response

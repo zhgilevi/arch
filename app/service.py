@@ -11,7 +11,7 @@ from gensim.models import Word2Vec
 from sqlalchemy.orm import Session
 from sklearn.cluster import KMeans
 
-from app.models import Burial, EmbeddingVersion, BurialEmbedding
+from app.models import Burial, EmbeddingVersion, BurialEmbedding, BurialInfo
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,7 +44,6 @@ def write_info(
         raise ValueError(f"Failed to read file: {e}")
 
     table_cols = list(df.columns)[1:]
-
     
     df = df.apply(lambda x: x.replace("?", np.nan))
     df = df.fillna(0)
@@ -56,11 +55,22 @@ def write_info(
     for col in df.columns:
         df[col] = df[col].astype(int)
 
+    burial_info = db.query(BurialInfo).filter(
+        BurialInfo.burial_short_name == short_name,
+        BurialInfo.burial_name == name
+    ).one_or_none()
+    if burial_info is None:
+        burial_info = BurialInfo(
+            burial_name=name,
+            burial_short_name=short_name
+        )
+        db.add(burial_info)
+        db.flush()
+
+
     new_records = dataframe_to_records(
         df=df,
         table_cols=table_cols,
-        burial_name=name,
-        burial_short_name=short_name,
     )
 
     existing_burials = db.query(Burial).all()
@@ -111,10 +121,10 @@ def write_info(
     for record in new_records:
         burial = Burial(
             kkm=record["kkm"],
-            burial_name=record["burial_name"],
-            burial_short_name=record["burial_short_name"],
+            burial_info=burial_info,
             items=record["items"],
         )
+        
         db.add(burial)
         db.flush()
 
@@ -137,8 +147,6 @@ def write_info(
 def dataframe_to_records(
     df: pd.DataFrame,
     table_cols: List[str],
-    burial_name: str,
-    burial_short_name: str,
 ) -> List[Dict[str, Any]]:
     records = []
 
@@ -154,8 +162,6 @@ def dataframe_to_records(
         records.append(
             {
                 "kkm": str(int(series["ккм"])),
-                "burial_name": burial_name,
-                "burial_short_name": burial_short_name,
                 "items": items,
             }
         )
@@ -170,8 +176,6 @@ def burials_to_records(burials: List[Burial]) -> List[Dict[str, Any]]:
         records.append(
             {
                 "kkm": burial.kkm,
-                "burial_name": burial.burial_name,
-                "burial_short_name": burial.burial_short_name,
                 "items": burial.items or [],
             }
         )
@@ -251,8 +255,8 @@ def get_all_embeddings_full(db: Session):
         result.append({
             "burial_id": burial.id,
             "kkm": burial.kkm,
-            "burial_name": burial.burial_name,
-            "burial_short_name": burial.burial_short_name,
+            "burial_name": burial.burial_info.burial_name,
+            "burial_short_name": burial.burial_info.burial_short_name,
             "items": burial.items,
             "vector": embedding.vector,
         })
@@ -322,22 +326,30 @@ def frequent_items(db: Session, cluster_num: int):
 
 
 def get_burial_info(db: Session, short_name: str):
+
+    burial_info = (
+        db.query(BurialInfo).filter(
+            BurialInfo.burial_short_name == short_name
+        ).one_or_none()
+                   )
     rows = (
         db.query(Burial)
-        .filter(Burial.burial_short_name == short_name)
+        .filter(Burial.burial_info.has(BurialInfo.burial_short_name == short_name))
         .order_by(Burial.id)
         .all()
     )
+    response = {"burial_name": burial_info.burial_name,
+                "burial_short_name": burial_info.burial_short_name
+                }
 
     result = []
     for burial in rows:
         result.append({
             "burial_id": burial.id,
             "kkm": burial.kkm,
-            "burial_name": burial.burial_name,
-            "burial_short_name": burial.burial_short_name,
             "items": burial.items,
         })
+    response["burials"] = result
 
-    return result
+    return response
 
