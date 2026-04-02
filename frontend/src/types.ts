@@ -14,7 +14,13 @@ export type ClusterGroup = {
 export type BurialObject = {
   burial_id: number;
   kkm: string;
-  burial_name: string;
-  burial_short_name: string;
   items: string[];
 };
+
+export type BurialDetailsResponse = {
+  burial_name: string;
+  burial_short_name: string;
+  burials: BurialObject[];
+};
+
+export type BurialSummary = BurialDetailsResponse;

@@ -1,4 +1,4 @@
-import type { BurialObject, ClusterGroup } from "./types";
+import type { BurialDetailsResponse, BurialSummary, ClusterGroup } from "./types";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "http://localhost:8000";
 
@@ -47,7 +47,12 @@ export async function getClusters(clusterCount: number) {
 
 export async function getBurial(shortName: string) {
   const response = await fetch(`${API_BASE_URL}/burial/${encodeURIComponent(shortName)}`);
-  return unwrapResponse<BurialObject[]>(response);
+  return unwrapResponse<BurialDetailsResponse>(response);
+}
+
+export async function getAllBurials() {
+  const response = await fetch(`${API_BASE_URL}/burial/all`);
+  return unwrapResponse<BurialSummary[]>(response);
 }
 
 export { API_BASE_URL };

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.service import write_info, frequent_items, get_burial_info
+from app.service import write_info, frequent_items, get_burial_info, get_all_burials
 
 
 router = APIRouter()
@@ -22,6 +22,11 @@ def get_clusters(cluster_num: int, db: Session = Depends(get_db)):
     response = frequent_items(db, cluster_num)
     return response
     
+
+@router.get("/burial/all")
+def get_burials_all( db: Session = Depends(get_db)):
+    response = get_all_burials(db)
+    return response
 
 
 @router.get("/burial/{burial_short_name}")

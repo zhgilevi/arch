@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getBurial } from "../api";
-import type { BurialObject } from "../types";
+import type { BurialDetailsResponse } from "../types";
 
 export function BurialPage() {
   const { shortName = "" } = useParams();
-  const [items, setItems] = useState<BurialObject[]>([]);
+  const [details, setDetails] = useState<BurialDetailsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -19,12 +19,12 @@ export function BurialPage() {
         const data = await getBurial(shortName);
 
         if (isActive) {
-          setItems(data);
+          setDetails(data);
         }
       } catch (loadError) {
         if (isActive) {
-          setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить информацию о погребении.");
-          setItems([]);
+          setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить информацию о могильнике.");
+          setDetails(null);
         }
       } finally {
         if (isActive) {
@@ -45,7 +45,10 @@ export function BurialPage() {
       <div className="results-toolbar">
         <div>
           <p className="eyebrow">Burial Details</p>
-          <h2>Погребения с short_name: {shortName}</h2>
+          <h2>{details?.burial_name ?? `Могильник: ${shortName}`}</h2>
+          <p className="panel-text">
+            short_name: <code>{details?.burial_short_name ?? shortName}</code>
+          </p>
         </div>
 
         <Link className="secondary-link" to="/clusters">
@@ -53,38 +56,44 @@ export function BurialPage() {
         </Link>
       </div>
 
-      {isLoading ? <div className="panel">Загрузка данных о погребении...</div> : null}
+      {isLoading ? <div className="panel">Загрузка информации о могильнике...</div> : null}
       {error ? <div className="message-box message-error">{error}</div> : null}
 
-      {!isLoading && !error ? (
+      {!isLoading && !error && details && details.burials.length > 0 ? (
         <div className="burial-list">
-          {items.map((item) => (
-            <article key={item.burial_id} className="panel burial-card">
+          {details.burials.map((burial) => (
+            <article key={burial.burial_id} className="panel burial-card">
               <div className="burial-card-header">
                 <div>
-                  <p className="panel-tag">{item.kkm}({item.burial_short_name})</p>
-                  <h3>{item.burial_name}</h3>
+                  <p className="panel-tag">
+                    {burial.kkm}({details.burial_short_name})
+                  </p>
+                  <h3>Захоронение {burial.kkm}</h3>
                 </div>
-                <span className="pill">ID {item.burial_id}</span>
+                <span className="pill">ID {burial.burial_id}</span>
               </div>
 
               <div>
                 <h4>Предметы</h4>
-                {item.items.length > 0 ? (
+                {burial.items.length > 0 ? (
                   <div className="pill-group">
-                    {item.items.map((subject, index) => (
-                      <span key={`${item.burial_id}-${subject}-${index}`} className="pill">
+                    {burial.items.map((subject, index) => (
+                      <span key={`${burial.burial_id}-${subject}-${index}`} className="pill">
                         {subject}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="panel-text">У этого объекта список предметов пуст.</p>
+                  <p className="panel-text">У этого захоронения список предметов пуст.</p>
                 )}
               </div>
             </article>
           ))}
         </div>
+      ) : null}
+
+      {!isLoading && !error && details && details.burials.length === 0 ? (
+        <div className="panel">Для этого могильника пока нет захоронений.</div>
       ) : null}
     </section>
   );

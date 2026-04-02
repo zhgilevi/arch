@@ -52,7 +52,7 @@ def write_info(
     for col in table_cols:
         df[col] = df[col].apply(lambda x: find_sum(str(x)))
 
-    for col in df.columns:
+    for col in table_cols:
         df[col] = df[col].astype(int)
 
     burial_info = db.query(BurialInfo).filter(
@@ -161,7 +161,7 @@ def dataframe_to_records(
 
         records.append(
             {
-                "kkm": str(int(series["ккм"])),
+                "kkm": str(series["ккм"]),
                 "items": items,
             }
         )
@@ -353,3 +353,31 @@ def get_burial_info(db: Session, short_name: str):
 
     return response
 
+def get_all_burials(db: Session):
+
+    response = []
+    burials_info = (
+        db.query(BurialInfo).all()
+    )
+
+
+    for burial_info in burials_info:
+        burials = (
+        db.query(Burial)
+        .filter(Burial.burial_info.has(BurialInfo.id == burial_info.id))
+        .order_by(Burial.id)
+        .all()
+    )
+        data = []
+        for burial in burials:
+            data.append({
+            "burial_id": burial.id,
+            "kkm": burial.kkm,
+            "items": burial.items,
+        })
+        response.append({"burial_name": burial_info.burial_name,
+                "burial_short_name": burial_info.burial_short_name,
+                "burials": data
+                })
+    
+    return response
