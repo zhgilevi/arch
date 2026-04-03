@@ -41,7 +41,25 @@ export async function getClusters(clusterCount: number) {
     cluster_num: String(clusterCount),
   });
 
-  const response = await fetch(`${API_BASE_URL}/cluster/clusters?${searchParams.toString()}`);
+  const response = await fetch(`${API_BASE_URL}/cluster/clusters?${searchParams.toString()}`, {
+    method: "POST",
+  });
+  return unwrapResponse<ClusterGroup[]>(response);
+}
+
+export async function getBurialClusters(payload: {
+  clustersNum: number;
+  burialShortName: string;
+}) {
+  const searchParams = new URLSearchParams({
+    clusters_num: String(payload.clustersNum),
+    burial_short_name: payload.burialShortName,
+  });
+
+  const response = await fetch(`${API_BASE_URL}/cluster/burial_clusters?${searchParams.toString()}`, {
+    method: "POST",
+  });
+
   return unwrapResponse<ClusterGroup[]>(response);
 }
 

@@ -12,11 +12,11 @@ from sqlalchemy.orm import Session
 from sklearn.cluster import KMeans
 
 from app.models import Burial, EmbeddingVersion, BurialEmbedding, BurialInfo
-
+from app.config import get_settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+SETTINGS = get_settings()
 MODEL_PATH = BASE_DIR / "models"
-
 
 def find_sum(s: str) -> int:
     nums = list(map(int, re.findall(r"\d+", s)))
@@ -214,14 +214,14 @@ def create_corpus(df: pd.DataFrame, table_cols: List[str]) -> List[List[str]]:
 def train_embed_model(corpus: List[List[str]]):
     embeddings_trained = Word2Vec(
         sentences=corpus,
-        vector_size=30,
-        window=10,
-        min_count=1,
-        workers=4,
-        sg=1,
-        epochs=30,
-        negative=10,
-        sample=0,
+        vector_size=SETTINGS.embedding_vector_size,
+        window=SETTINGS.word2vec_window,
+        min_count=SETTINGS.word2vec_min_count,
+        workers=SETTINGS.word2vec_workers,
+        sg=SETTINGS.word2vec_sg,
+        epochs=SETTINGS.word2vec_epochs,
+        negative=SETTINGS.word2vec_negative,
+        sample=SETTINGS.word2vec_sample,
     ).wv
 
     MODEL_PATH.mkdir(parents=True, exist_ok=True)
@@ -381,3 +381,91 @@ def get_all_burials(db: Session):
                 })
     
     return response
+
+def get_all_burial_embeddings_full(db: Session, burial_short_name: str):
+    active_version = (
+        db.query(EmbeddingVersion)
+        .filter(EmbeddingVersion.status == "ACTIVE")
+        .order_by(EmbeddingVersion.version_no.desc())
+        .first()
+    )
+
+    if active_version is None:
+        return []
+
+    rows = (
+        db.query(Burial, BurialEmbedding)
+        .join(BurialEmbedding, Burial.id == BurialEmbedding.burial_id)
+        .filter(BurialEmbedding.embedding_version_id == active_version.id,
+                Burial.burial_info.has(BurialInfo.burial_short_name == burial_short_name))
+        .order_by(Burial.id)
+        .all()
+    )
+
+    result = []
+    for burial, embedding in rows:
+        result.append({
+            "burial_id": burial.id,
+            "kkm": burial.kkm,
+            "burial_name": burial.burial_info.burial_name,
+            "burial_short_name": burial.burial_info.burial_short_name,
+            "items": burial.items,
+            "vector": embedding.vector,
+        })
+
+    return result
+
+def get_burial_cluster(db: Session, cluster_num: int, burial_short_name: str):
+    try:
+        data = get_all_burial_embeddings_full(db, burial_short_name)
+        km = KMeans(n_clusters=cluster_num, n_init="auto", random_state=42)
+        X = [record["vector"] for record in data]
+        labels = km.fit_predict(X)
+    except Exception as e:
+        raise e
+    
+    return labels
+
+
+def frequent_burial_items(clusters_num: int, burial_short_name:str, 
+                        db: Session):
+    
+    data = get_all_burial_embeddings_full(db, burial_short_name)
+    labels = get_burial_cluster(db, clusters_num, burial_short_name)
+
+    cluster_to_ids: Dict[str, List[str]] = {}
+    ids_to_short_name = {i["kkm"]: i["burial_short_name"] for i in data}
+    cluster_subject_top = {}
+    subjects_top = []
+    for i, cid in zip(data, labels):
+        cluster_to_ids.setdefault(int(cid), []).append(i["kkm"])
+        c = int(cid)
+        subjects = set(i["items"])
+
+        if not subjects:
+            continue
+
+        cluster_subject_top.setdefault(c, [])
+        cluster_subject_top[c].extend([{"subject": s} for s in i["items"]])
+        subjects_top.extend(i["items"])
+
+    for c in list(cluster_to_ids.keys()):
+        raw = cluster_subject_top.get(c, [])
+        counter = Counter([x["subject"] for x in raw]) if raw else Counter()
+        top10 = [{"subject": s, "count": int(n)} for s, n in counter.most_common(10)]
+        cluster_subject_top[c] = top10
+
+    top_counter  = Counter(subjects_top)
+    cluster_groups = []
+    for c in sorted(cluster_to_ids.keys()):
+        cluster_groups.append(
+            {
+                "cluster": c,
+                "ids": cluster_to_ids[c],
+                "short_name": [ids_to_short_name[idx] for idx in cluster_to_ids[c]],
+                "count": len(cluster_to_ids[c]),
+                "top_subjects": cluster_subject_top.get(c, []), 
+            }
+        )
+
+    return cluster_groups

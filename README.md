@@ -27,3 +27,37 @@ npm run dev
 
 По умолчанию frontend обращается к backend по адресу `http://localhost:8000`.
 При необходимости можно переопределить адрес через переменную `VITE_API_BASE_URL`.
+
+## Запуск через Docker
+
+В репозитории добавлены:
+
+- `Dockerfile.backend` для FastAPI backend
+- `frontend/Dockerfile.frontend` для сборки React frontend и раздачи через Nginx
+- `docker-compose.yml` для запуска `postgres + backend + frontend`
+
+Backend-образ использует `uv` и `uv.lock`, поэтому Docker-сборка повторяет локальный способ установки зависимостей.
+
+Запуск всего приложения:
+
+```bash
+docker compose up --build
+```
+
+После старта сервисы будут доступны по адресам:
+
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:8000`
+- postgres: `localhost:5432`
+
+Остановка:
+
+```bash
+docker compose down
+```
+
+Если нужно удалить и данные базы:
+
+```bash
+docker compose down -v
+```
