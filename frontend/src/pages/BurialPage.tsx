@@ -108,8 +108,7 @@ export function BurialPage() {
           <p className="panel-tag">Кластеризация могильника</p>
           <h3>Сгруппировать захоронения внутри могильника</h3>
           <p className="panel-text">
-            Эта форма вызывает <code>/cluster/burial_clusters</code> и строит кластеры только для захоронений из текущего
-            могильника.
+            Эта форма строит кластеры только для захоронений из текущего могильника.
           </p>
 
           <form className="form-stack" onSubmit={handleClusterizeBurial}>

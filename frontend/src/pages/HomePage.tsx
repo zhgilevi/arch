@@ -30,7 +30,7 @@ export function HomePage() {
       setUploadMessage("");
       await uploadBurial({ file, name, shortName });
       setUploadState("success");
-      setUploadMessage("Файл успешно загружен в backend.");
+      setUploadMessage("Файл успешно загружен.");
     } catch (error) {
       setUploadState("error");
       setUploadMessage(error instanceof Error ? error.message : "Не удалось загрузить данные.");
@@ -69,7 +69,7 @@ export function HomePage() {
           <p className="panel-tag">Шаг 1</p>
           <h2>Загрузка данных</h2>
           <p className="panel-text">
-            Отправьте Excel-файл на эндпоинт <code>/burial/upload</code> вместе с полным и коротким именем погребения.
+            Отправьте Excel-файл вместе с полным и коротким именем погребения.
           </p>
 
           <form className="form-stack" onSubmit={handleUpload}>
@@ -119,8 +119,7 @@ export function HomePage() {
           <p className="panel-tag">Шаг 2</p>
           <h2>Кластеризация</h2>
           <p className="panel-text">
-            Укажите количество кластеров и откройте страницу результатов. На ней автоматически вызывается эндпоинт{" "}
-            <code>/cluster/clusters</code>.
+            Укажите количество кластеров и откройте страницу результатов.
           </p>
 
           <form className="form-stack" onSubmit={handleClusterize}>
@@ -146,8 +145,8 @@ export function HomePage() {
         <p className="panel-tag">Шаг 3</p>
         <h2>Список могильников</h2>
         <p className="panel-text">
-          По кнопке ниже загружается список могильников с эндпоинта <code>/burial/all</code>. Нажатие на карточку
-          открывает информацию о могильнике через маршрут <code>/burial/:burial_short_name</code>.
+          По кнопке ниже загружается список могильников. Нажатие на карточку
+          открывает информацию о могильнике.
         </p>
 
         <button className="primary-button" type="button" onClick={handleShowBurials} disabled={isBurialListLoading}>

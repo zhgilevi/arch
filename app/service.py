@@ -286,11 +286,12 @@ def frequent_items(db: Session, cluster_num: int):
     labels = get_cluster(db, cluster_num)
 
     cluster_to_ids: Dict[str, List[str]] = {}
-    ids_to_short_name = {i["kkm"]: i["burial_short_name"] for i in data}
+    ids_to_short_name = {i["burial_id"]: i["burial_short_name"] for i in data}
+    ids_to_kkm = {i["burial_id"]: i["kkm"] for i in data}
     cluster_subject_top = {}
     subjects_top = []
     for i, cid in zip(data, labels):
-        cluster_to_ids.setdefault(int(cid), []).append(i["kkm"])
+        cluster_to_ids.setdefault(int(cid), []).append(i["burial_id"])
         c = int(cid)
         subjects = set(i["items"])
 
@@ -313,7 +314,7 @@ def frequent_items(db: Session, cluster_num: int):
         cluster_groups.append(
             {
                 "cluster": c,
-                "ids": cluster_to_ids[c],
+                "ids": [ids_to_kkm[i] for i in cluster_to_ids[c]],
                 "short_name": [ids_to_short_name[idx] for idx in cluster_to_ids[c]],
                 "count": len(cluster_to_ids[c]),
                 "top_subjects": cluster_subject_top.get(c, []), 
