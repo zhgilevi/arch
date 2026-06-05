@@ -17,4 +17,5 @@ dependencies = [
     "python-multipart>=0.0.22",
     "scikit-learn>=1.8.0",
     "sqlalchemy>=2.0.47",
+    "xlrd>=2.0.2",
 ]
