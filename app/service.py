@@ -6,7 +6,7 @@ from collections import Counter
 
 import numpy as np
 import pandas as pd
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 from gensim.models import Word2Vec
 from sqlalchemy.orm import Session
 from sklearn.cluster import KMeans
@@ -46,8 +46,11 @@ def write_info(
     table_cols = list(df.columns)[1:]
     
     df = df.apply(lambda x: x.replace("?", np.nan))
+    df = df.dropna(subset=['ккм'])
     df = df.fillna(0)
-
+    duplicates = df['ккм'][df['ккм'].duplicated(keep=False)].unique().tolist()
+    if len(duplicates) > 0:
+        raise HTTPException(status_code=400, detail=f"Duplicate values found in column 'ккм': {', '.join(map(str, duplicates))}")
 
     for col in table_cols:
         df[col] = df[col].apply(lambda x: find_sum(str(x)))
